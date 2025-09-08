@@ -7,8 +7,9 @@ export default defineConfig({
     chunkSizeWarningLimit: 1000, // Increase chunk size warning limit to 1000kB
     rollupOptions: {
       onwarn(warning, warn) {
-        // Ignore warnings about pure annotations
+        // Suppress warnings about pure annotations and ox library issues
         if (warning.code === 'INVALID_ANNOTATION') return;
+        if (warning.message && warning.message.includes('ox')) return;
         warn(warning);
       },
       output: {
@@ -20,9 +21,25 @@ export default defineConfig({
     },
     commonjsOptions: {
       transformMixedEsModules: true
-    }
+    },
+    target: 'esnext',
+    minify: false, // Disable minification to avoid terser issues
   },
   optimizeDeps: {
-    include: ['react', 'react-dom', 'wagmi', '@rainbow-me/rainbowkit', 'viem']
+    include: [
+      'react',
+      'react-dom',
+      '@rainbow-me/rainbowkit',
+      'wagmi',
+      'viem',
+      '@tanstack/react-query',
+      'lucide-react',
+      'axios',
+      '@supabase/supabase-js',
+      'openai'
+    ]
+  },
+  define: {
+    global: 'globalThis',
   }
 })

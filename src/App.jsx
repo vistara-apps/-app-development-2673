@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ConnectButton, useAccount } from '@rainbow-me/rainbowkit';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { useAccount } from 'wagmi';
 import { Leaf, Sparkles, Heart, Star, Award } from 'lucide-react';
 import ProfileForm from './components/ProfileForm';
 import RecommendationCard from './components/RecommendationCard';

@@ -1,49 +1,154 @@
-import React, { useState } from 'react';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
+import React, { useState, useEffect } from 'react';
+import { ConnectButton, useAccount } from '@rainbow-me/rainbowkit';
 import { Leaf, Sparkles, Heart, Star, Award } from 'lucide-react';
 import ProfileForm from './components/ProfileForm';
 import RecommendationCard from './components/RecommendationCard';
+import PaymentModal from './components/PaymentModal';
+import ErrorBoundary from './components/ErrorBoundary';
 import { usePaymentContext } from './hooks/usePaymentContext';
 import { generateRecommendations } from './services/openaiService';
+import { UserProfileService, RecommendationService, AnalyticsService } from './services/supabaseService';
+import { usePaymentService } from './services/paymentService';
 
 function App() {
   const [user, setUser] = useState(null);
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [showPaywall, setShowPaywall] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [credits, setCredits] = useState(null);
+  const { address } = useAccount();
   const { createSession } = usePaymentContext();
+  const { checkCredits } = usePaymentService();
+
+  // Load user profile and credits on wallet connection
+  useEffect(() => {
+    if (address) {
+      loadUserData();
+    }
+  }, [address]);
+
+  const loadUserData = async () => {
+    if (!address) return;
+    
+    try {
+      // Load existing profile
+      const profile = await UserProfileService.getProfile(address);
+      if (profile) {
+        setUser(profile.style_preferences);
+      }
+
+      // Load credits
+      const creditsData = await checkCredits(address);
+      setCredits(creditsData);
+
+      // Track user session
+      await AnalyticsService.trackAction(address, 'session_start');
+    } catch (error) {
+      console.error('Error loading user data:', error);
+    }
+  };
 
   const handleProfileSubmit = async (profileData) => {
     setUser(profileData);
+    
+    // Save profile to database
+    if (address) {
+      try {
+        await UserProfileService.upsertProfile(address, profileData);
+        await AnalyticsService.trackAction(address, 'profile_created', profileData);
+      } catch (error) {
+        console.error('Error saving profile:', error);
+      }
+    }
+    
     await getRecommendations(profileData, true);
   };
 
   const getRecommendations = async (profile, isFree = false) => {
+    if (!address) return;
+    
     setLoading(true);
     try {
-      const newRecommendations = await generateRecommendations(profile);
-      setRecommendations(newRecommendations);
-      setShowPaywall(false);
+      // Check if user has credits first
+      if (!isFree && credits?.hasCredits) {
+        // Use existing credits
+        const newRecommendations = await generateRecommendations(profile);
+        setRecommendations(newRecommendations);
+        
+        // Save recommendations
+        await RecommendationService.saveRecommendations(address, newRecommendations, true);
+        
+        // Refresh credits
+        const updatedCredits = await checkCredits(address);
+        setCredits(updatedCredits);
+        
+        await AnalyticsService.trackAction(address, 'recommendations_generated', {
+          count: newRecommendations.length,
+          usedCredits: true
+        });
+      } else {
+        // Generate recommendations
+        const newRecommendations = await generateRecommendations(profile);
+        setRecommendations(newRecommendations);
+        
+        // Save recommendations
+        await RecommendationService.saveRecommendations(address, newRecommendations, !isFree);
+        
+        await AnalyticsService.trackAction(address, 'recommendations_generated', {
+          count: newRecommendations.length,
+          isFree
+        });
+      }
     } catch (error) {
       console.error('Error generating recommendations:', error);
+      await AnalyticsService.trackAction(address, 'error', {
+        action: 'generate_recommendations',
+        error: error.message
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGetMoreRecommendations = async () => {
+  const handleGetMoreRecommendations = () => {
+    if (!address) return;
+    setShowPaymentModal(true);
+  };
+
+  const handlePayment = async (paymentType, count) => {
+    if (!address) return;
+    
     try {
+      setLoading(true);
+      
+      // Process payment
       await createSession();
-      await getRecommendations(user);
+      
+      // Generate new recommendations
+      await getRecommendations(user, false);
+      
+      // Close modal
+      setShowPaymentModal(false);
+      
+      await AnalyticsService.trackAction(address, 'payment_completed', {
+        paymentType,
+        count,
+        amount: paymentType === 'bundle' ? 5.00 : 0.50
+      });
     } catch (error) {
       console.error('Payment failed:', error);
-      setShowPaywall(true);
+      await AnalyticsService.trackAction(address, 'payment_failed', {
+        error: error.message
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="gradient-bg min-h-screen">
-      <div className="container mx-auto px-4 py-6 max-w-4xl">
+    <ErrorBoundary>
+      <div className="gradient-bg min-h-screen">
+        <div className="container mx-auto px-4 py-6 max-w-4xl">
         {/* Header */}
         <header className="flex justify-between items-center mb-8">
           <div className="flex items-center space-x-2">
@@ -102,13 +207,20 @@ function App() {
                 <Heart className="w-6 h-6 text-accent" />
                 <h3 className="text-xl font-semibold text-white">Your Recommendations</h3>
               </div>
-              {recommendations.length > 0 && (
-                <button
-                  onClick={handleGetMoreRecommendations}
-                  className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/80 transition-colors text-sm"
-                >
-                  Get More ($0.50)
-                </button>
+              {recommendations.length > 0 && address && (
+                <div className="flex items-center space-x-2">
+                  {credits?.hasCredits && (
+                    <span className="text-xs text-white/70 bg-green-500/20 px-2 py-1 rounded">
+                      {credits.remainingCredits} credits
+                    </span>
+                  )}
+                  <button
+                    onClick={handleGetMoreRecommendations}
+                    className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/80 transition-colors text-sm"
+                  >
+                    {credits?.hasCredits ? 'Use Credit' : 'Get More ($0.50)'}
+                  </button>
+                </div>
               )}
             </div>
 
@@ -136,38 +248,23 @@ function App() {
           </div>
         </div>
 
-        {/* Paywall Modal */}
-        {showPaywall && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-xl p-6 max-w-md w-full">
-              <h3 className="text-xl font-semibold mb-4">Get More Recommendations</h3>
-              <p className="text-gray-600 mb-6">
-                Unlock personalized eco-friendly fashion recommendations for just $0.50.
-              </p>
-              <div className="flex space-x-4">
-                <button
-                  onClick={() => setShowPaywall(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleGetMoreRecommendations}
-                  className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/80 transition-colors"
-                >
-                  Pay $0.50
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Payment Modal */}
+        <PaymentModal
+          isOpen={showPaymentModal}
+          onClose={() => setShowPaymentModal(false)}
+          onPayment={handlePayment}
+          loading={loading}
+          userId={address}
+          requestedCount={3}
+        />
 
         {/* Footer */}
         <footer className="mt-16 text-center text-white/60">
           <p>Sustainable fashion recommendations powered by AI</p>
         </footer>
+        </div>
       </div>
-    </div>
+    </ErrorBoundary>
   );
 }
 

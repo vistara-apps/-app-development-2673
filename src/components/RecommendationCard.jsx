@@ -1,62 +1,45 @@
 import React from 'react';
-import { Leaf, ExternalLink, DollarSign } from 'lucide-react';
+import { ExternalLink, Leaf, Droplets, Recycle, Award } from 'lucide-react';
+import EcoTag from './EcoTag';
 
-const RecommendationCard = ({ recommendation, variant = 'withImage' }) => {
-  const { brandName, itemName, description, ecoImpact, styleMatch, estimatedPrice } = recommendation;
-
-  const handleLearnMore = () => {
-    // In a real app, this would link to the actual product page
-    window.open(`https://www.google.com/search?q=${brandName} ${itemName}`, '_blank');
-  };
+const RecommendationCard = ({ recommendation }) => {
+  const { brandName, itemName, itemUrl, ecoImpactSummary, price, category } = recommendation;
 
   return (
-    <div className={`bg-surface rounded-lg shadow-md card-hover animate-slide-up ${
-      variant === 'compact' ? 'p-4' : 'p-6'
-    }`}>
-      {variant === 'withImage' && (
-        <div className="w-full h-40 bg-gradient-to-br from-primary/10 to-accent/10 rounded-md mb-4 flex items-center justify-center">
-          <Leaf className="w-12 h-12 text-primary/60" />
+    <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20 hover:bg-white/20 transition-all duration-200 animate-fadeIn">
+      <div className="flex justify-between items-start mb-3">
+        <div className="flex-1">
+          <h4 className="text-lg font-semibold text-white mb-1">{itemName}</h4>
+          <p className="text-accent font-medium">{brandName}</p>
+          <p className="text-sm text-white/70">{category}</p>
         </div>
-      )}
-      
-      <div className="space-y-3">
-        <div>
-          <h3 className="text-lg font-semibold text-text-primary">{itemName}</h3>
-          <p className="text-sm text-accent font-medium">{brandName}</p>
+        <div className="text-right">
+          <p className="text-lg font-bold text-white">{price}</p>
         </div>
-        
-        <p className="text-text-secondary text-sm leading-relaxed">{description}</p>
-        
-        <div className="bg-primary/5 rounded-md p-3">
-          <div className="flex items-start gap-2">
-            <Leaf className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-            <div>
-              <p className="text-xs font-medium text-primary mb-1">Eco Impact</p>
-              <p className="text-sm text-text-secondary">{ecoImpact}</p>
-            </div>
-          </div>
+      </div>
+
+      {/* Eco Impact Tags */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        {ecoImpactSummary.map((impact, index) => (
+          <EcoTag key={index} impact={impact} />
+        ))}
+      </div>
+
+      {/* Action Button */}
+      <div className="flex justify-between items-center">
+        <div className="flex items-center space-x-1 text-sm text-white/70">
+          <Leaf className="w-4 h-4" />
+          <span>Sustainable Choice</span>
         </div>
-        
-        <div className="space-y-2">
-          <p className="text-xs text-text-secondary">
-            <span className="font-medium">Style Match:</span> {styleMatch}
-          </p>
-          
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1 text-text-primary">
-              <DollarSign className="w-4 h-4" />
-              <span className="font-semibold">{estimatedPrice}</span>
-            </div>
-            
-            <button
-              onClick={handleLearnMore}
-              className="flex items-center gap-2 text-primary hover:text-primary/80 text-sm font-medium transition-colors"
-            >
-              Learn More
-              <ExternalLink className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
+        <a
+          href={itemUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center space-x-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/80 transition-colors text-sm font-medium"
+        >
+          <span>View Item</span>
+          <ExternalLink className="w-4 h-4" />
+        </a>
       </div>
     </div>
   );

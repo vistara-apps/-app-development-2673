@@ -1,128 +1,134 @@
 import React, { useState } from 'react';
 import { User, Palette, Shirt, Heart } from 'lucide-react';
 
-const ProfileForm = ({ onSubmit, editMode = true }) => {
-  const [preferences, setPreferences] = useState({
+const ProfileForm = ({ onSubmit, loading }) => {
+  const [formData, setFormData] = useState({
     brands: '',
+    aesthetic: '',
     fits: '',
-    aesthetics: '',
     colors: ''
   });
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit(preferences);
+    onSubmit(formData);
   };
 
-  const handleInputChange = (field, value) => {
-    setPreferences(prev => ({
-      ...prev,
-      [field]: value
-    }));
+  const handleChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  if (!editMode) {
-    return (
-      <div className="bg-surface rounded-lg p-6 shadow-md">
-        <h3 className="text-xl font-semibold text-text-primary mb-4">Your Style Profile</h3>
-        <div className="space-y-3">
-          <div className="flex items-center gap-3">
-            <Heart className="w-5 h-5 text-primary" />
-            <span className="text-sm font-medium text-text-secondary">Brands:</span>
-            <span className="text-text-primary">{preferences.brands}</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <Shirt className="w-5 h-5 text-primary" />
-            <span className="text-sm font-medium text-text-secondary">Fits:</span>
-            <span className="text-text-primary">{preferences.fits}</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <User className="w-5 h-5 text-primary" />
-            <span className="text-sm font-medium text-text-secondary">Aesthetics:</span>
-            <span className="text-text-primary">{preferences.aesthetics}</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <Palette className="w-5 h-5 text-primary" />
-            <span className="text-sm font-medium text-text-secondary">Colors:</span>
-            <span className="text-text-primary">{preferences.colors}</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const presetOptions = {
+    aesthetic: ['Minimalist', 'Bohemian', 'Classic', 'Streetwear', 'Vintage', 'Modern'],
+    fits: ['Relaxed', 'Fitted', 'Oversized', 'Tailored', 'Loose', 'Slim'],
+    colors: ['Neutral tones', 'Earth colors', 'Pastels', 'Bold colors', 'Monochrome', 'Jewel tones']
+  };
 
   return (
-    <div className="bg-surface rounded-lg p-6 shadow-md animate-fade-in">
-      <h2 className="text-xl font-semibold text-text-primary mb-6 flex items-center gap-3">
-        <User className="w-6 h-6 text-primary" />
-        Create Your Style Profile
-      </h2>
-      
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div>
-          <label className="block text-sm font-medium text-text-secondary mb-2">
-            Favorite Brands
-          </label>
-          <input
-            type="text"
-            placeholder="e.g., Nike, Zara, Uniqlo"
-            value={preferences.brands}
-            onChange={(e) => handleInputChange('brands', e.target.value)}
-            className="w-full px-4 py-3 border border-gray-200 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-            required
-          />
-        </div>
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Favorite Brands */}
+      <div className="space-y-2">
+        <label className="flex items-center space-x-2 text-white font-medium">
+          <User className="w-4 h-4" />
+          <span>Favorite Brands</span>
+        </label>
+        <input
+          type="text"
+          value={formData.brands}
+          onChange={(e) => handleChange('brands', e.target.value)}
+          placeholder="e.g., Patagonia, Everlane, Reformation"
+          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-accent"
+          required
+        />
+      </div>
 
-        <div>
-          <label className="block text-sm font-medium text-text-secondary mb-2">
-            Preferred Fits
-          </label>
-          <input
-            type="text"
-            placeholder="e.g., oversized, slim, relaxed"
-            value={preferences.fits}
-            onChange={(e) => handleInputChange('fits', e.target.value)}
-            className="w-full px-4 py-3 border border-gray-200 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-            required
-          />
+      {/* Aesthetic Style */}
+      <div className="space-y-2">
+        <label className="flex items-center space-x-2 text-white font-medium">
+          <Palette className="w-4 h-4" />
+          <span>Style Aesthetic</span>
+        </label>
+        <div className="grid grid-cols-2 gap-2">
+          {presetOptions.aesthetic.map((option) => (
+            <button
+              key={option}
+              type="button"
+              onClick={() => handleChange('aesthetic', option)}
+              className={`px-3 py-2 rounded-lg text-sm transition-colors ${
+                formData.aesthetic === option
+                  ? 'bg-accent text-white'
+                  : 'bg-white/10 text-white/80 hover:bg-white/20'
+              }`}
+            >
+              {option}
+            </button>
+          ))}
         </div>
+        <input
+          type="text"
+          value={formData.aesthetic}
+          onChange={(e) => handleChange('aesthetic', e.target.value)}
+          placeholder="Or describe your style..."
+          className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-accent text-sm"
+        />
+      </div>
 
-        <div>
-          <label className="block text-sm font-medium text-text-secondary mb-2">
-            Style Aesthetics
-          </label>
-          <input
-            type="text"
-            placeholder="e.g., minimalist, streetwear, bohemian"
-            value={preferences.aesthetics}
-            onChange={(e) => handleInputChange('aesthetics', e.target.value)}
-            className="w-full px-4 py-3 border border-gray-200 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-            required
-          />
+      {/* Preferred Fits */}
+      <div className="space-y-2">
+        <label className="flex items-center space-x-2 text-white font-medium">
+          <Shirt className="w-4 h-4" />
+          <span>Preferred Fits</span>
+        </label>
+        <div className="grid grid-cols-2 gap-2">
+          {presetOptions.fits.map((option) => (
+            <button
+              key={option}
+              type="button"
+              onClick={() => handleChange('fits', option)}
+              className={`px-3 py-2 rounded-lg text-sm transition-colors ${
+                formData.fits === option
+                  ? 'bg-accent text-white'
+                  : 'bg-white/10 text-white/80 hover:bg-white/20'
+              }`}
+            >
+              {option}
+            </button>
+          ))}
         </div>
+      </div>
 
-        <div>
-          <label className="block text-sm font-medium text-text-secondary mb-2">
-            Color Palette
-          </label>
-          <input
-            type="text"
-            placeholder="e.g., earth tones, pastels, monochrome"
-            value={preferences.colors}
-            onChange={(e) => handleInputChange('colors', e.target.value)}
-            className="w-full px-4 py-3 border border-gray-200 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-            required
-          />
+      {/* Color Preferences */}
+      <div className="space-y-2">
+        <label className="flex items-center space-x-2 text-white font-medium">
+          <Heart className="w-4 h-4" />
+          <span>Color Palette</span>
+        </label>
+        <div className="grid grid-cols-2 gap-2">
+          {presetOptions.colors.map((option) => (
+            <button
+              key={option}
+              type="button"
+              onClick={() => handleChange('colors', option)}
+              className={`px-3 py-2 rounded-lg text-sm transition-colors ${
+                formData.colors === option
+                  ? 'bg-accent text-white'
+                  : 'bg-white/10 text-white/80 hover:bg-white/20'
+              }`}
+            >
+              {option}
+            </button>
+          ))}
         </div>
+      </div>
 
-        <button
-          type="submit"
-          className="w-full bg-primary text-white py-3 px-6 rounded-md font-medium hover:bg-opacity-90 transition-all transform hover:scale-[1.02] shadow-md"
-        >
-          Save Profile & Get Recommendations
-        </button>
-      </form>
-    </div>
+      <button
+        type="submit"
+        disabled={loading || !formData.brands || !formData.aesthetic || !formData.fits || !formData.colors}
+        className="w-full px-6 py-3 bg-accent text-white rounded-lg font-medium hover:bg-accent/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {loading ? 'Generating Recommendations...' : 'Get My Eco-Style Matches'}
+      </button>
+    </form>
   );
 };
 

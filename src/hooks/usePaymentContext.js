@@ -7,9 +7,9 @@ export function usePaymentContext() {
   const { data: walletClient, isError, isLoading } = useWalletClient();
 
   const createSession = useCallback(async () => {
-    if (!walletClient || !walletClient.account) throw new Error("please connect your wallet");
-    if (isError) throw new Error("wallet not connected");
-    if (isLoading) throw new Error("wallet is loading");
+    if (!walletClient || !walletClient.account) throw new Error("Please connect your wallet");
+    if (isError) throw new Error("Wallet not connected");
+    if (isLoading) throw new Error("Wallet is loading");
     
     const baseClient = axios.create({
       baseURL: "https://payments.vistara.dev",
@@ -20,14 +20,15 @@ export function usePaymentContext() {
     
     const apiClient = withPaymentInterceptor(baseClient, walletClient);
     const response = await apiClient.post("/api/payment", { amount: "$0.50" });
-    const paymentResponse = response.config.headers["X-PAYMENT"];
     
-    if (!paymentResponse) throw new Error("payment response is absent");
+    const paymentResponse = response.config.headers["X-PAYMENT"];
+    if (!paymentResponse) throw new Error("Payment response is absent");
+    
     const decoded = decodeXPaymentResponse(paymentResponse);
-    console.log(`decoded payment response: ${JSON.stringify(decoded)}`);
+    console.log(`Payment successful: ${JSON.stringify(decoded)}`);
     
     return decoded;
-  }, [walletClient]);
+  }, [walletClient, isError, isLoading]);
 
   return { createSession };
 }
